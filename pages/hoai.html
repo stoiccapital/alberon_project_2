@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOAI Tragwerksplanung - Project Management</title>
+    <link rel="stylesheet" href="../styles/style.css">
+    <link rel="icon" type="image/x-icon" href="../public/favicon.ico">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <img src="../public/logo.png" alt="Logo" class="logo">
+            <div class="nav-links">
+                <a href="index.html">Projects</a>
+                <a href="finished.html">Finished</a>
+                <a href="revenue.html">Revenue</a>
+                <a href="employees.html">Employees</a>
+                <a href="receivables.html">Receivables</a>
+                <a href="hoai.html">HOAI</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>HOAI Tragwerksplanung</h1>
+        </div>
+        <div class="calculator-container">
+            <form id="hoaiForm" class="calculator-form">
+                <div class="form-group">
+                    <label for="constructionCost">Anrechenbare Kosten (€)</label>
+                    <input type="number" id="constructionCost" name="constructionCost" step="1000" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="honorarZone">Honorarzone</label>
+                    <select id="honorarZone" name="honorarZone" required>
+                        <option value="">Bitte wählen</option>
+                        <option value="1">Zone 1</option>
+                        <option value="2">Zone 2</option>
+                        <option value="3">Zone 3</option>
+                        <option value="4">Zone 4</option>
+                        <option value="5">Zone 5</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="submit-button">Berechnen</button>
+                </div>
+            </form>
+
+            <div id="resultContainer" class="result-container" style="display: none;">
+                <h2>Berechnungsergebnis</h2>
+                <div class="result-grid">
+                    <div class="result-item total">
+                        <span class="result-label">Ihr HOAI-Honorar:</span>
+                        <span id="hoaiFee" class="result-value">€0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // HOAI fee table
+        const HOAI_TABLE = [
+            { kosten: 25000,     z1: 3449,    z2: 4109,    z3: 4768,    z4: 5428,    z5: 6036 },
+            { kosten: 35000,     z1: 4475,    z2: 5331,    z3: 6186,    z4: 7042,    z5: 7831 },
+            { kosten: 50000,     z1: 5897,    z2: 7024,    z3: 8152,    z4: 9279,    z5: 10320 },
+            { kosten: 75000,     z1: 8069,    z2: 9611,    z3: 11154,   z4: 12697,   z5: 14121 },
+            { kosten: 100000,    z1: 10079,   z2: 12005,   z3: 13932,   z4: 15859,   z5: 17637 },
+            { kosten: 150000,    z1: 13786,   z2: 16422,   z3: 19058,   z4: 21693,   z5: 24126 },
+            { kosten: 200000,    z1: 17215,   z2: 20506,   z3: 23797,   z4: 27088,   z5: 30126 },
+            { kosten: 300000,    z1: 23534,   z2: 28033,   z3: 32532,   z4: 37031,   z5: 41185 },
+            { kosten: 500000,    z1: 34865,   z2: 41530,   z3: 48195,   z4: 54861,   z5: 61013 },
+            { kosten: 750000,    z1: 47576,   z2: 56672,   z3: 65767,   z4: 74863,   z5: 83258 },
+            { kosten: 1000000,   z1: 59264,   z2: 70594,   z3: 81924,   z4: 93254,   z5: 103712 },
+            { kosten: 1500000,   z1: 78749,   z2: 93877,   z3: 109005,  z4: 124132,  z5: 138121 },
+            { kosten: 2000000,   z1: 96611,   z2: 115202,  z3: 133793,  z4: 152384,  z5: 169744 },
+            { kosten: 2500000,   z1: 113076,  z2: 134964,  z3: 156853,  z4: 178741,  z5: 199018 },
+            { kosten: 3000000,   z1: 129090,  z2: 154299,  z3: 179509,  z4: 204718,  z5: 228152 },
+            { kosten: 4000000,   z1: 157633,  z2: 188411,  z3: 219190,  z4: 249969,  z5: 278794 },
+            { kosten: 5000000,   z1: 183660,  z2: 219476,  z3: 255292,  z4: 291107,  z5: 324893 },
+            { kosten: 7500000,   z1: 236994,  z2: 283239,  z3: 329484,  z4: 375729,  z5: 419241 },
+            { kosten: 10000000,  z1: 286302,  z2: 342325,  z3: 398347,  z4: 454368,  z5: 507325 },
+            { kosten: 15000000,  z1: 474901,  z2: 565691,  z3: 656480,  z4: 747270,  z5: 831076 },
+            { kosten: 20000000,  z1: 592324,  z2: 705563,  z3: 818801,  z4: 932040,  z5: 1036568 },
+            { kosten: 25000000,  z1: 702770,  z2: 837123,  z3: 971476,  z4: 1105829, z5: 1229848 }
+        ];
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('de-DE', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(amount);
+        }
+
+        function calculateHOAIHonorarInterpolated(cost, zone) {
+            // Input validation
+            if (typeof cost !== 'number' || isNaN(cost) || cost < 0) {
+                throw new Error('Invalid cost value');
+            }
+            if (typeof zone !== 'number' || zone < 1 || zone > 5) {
+                throw new Error('Invalid zone value');
+            }
+
+            // If cost is below lowest bracket, return lowest value
+            if (cost <= HOAI_TABLE[0].kosten) {
+                return HOAI_TABLE[0][`z${zone}`];
+            }
+
+            // If cost is above highest bracket, return highest value
+            if (cost >= HOAI_TABLE[HOAI_TABLE.length - 1].kosten) {
+                return HOAI_TABLE[HOAI_TABLE.length - 1][`z${zone}`];
+            }
+
+            // Find the brackets to interpolate between
+            let lowerBracket = null;
+            let upperBracket = null;
+
+            for (let i = 0; i < HOAI_TABLE.length - 1; i++) {
+                if (cost >= HOAI_TABLE[i].kosten && cost <= HOAI_TABLE[i + 1].kosten) {
+                    lowerBracket = HOAI_TABLE[i];
+                    upperBracket = HOAI_TABLE[i + 1];
+                    break;
+                }
+            }
+
+            // If exact match found, return that value
+            if (cost === lowerBracket.kosten) {
+                return lowerBracket[`z${zone}`];
+            }
+            if (cost === upperBracket.kosten) {
+                return upperBracket[`z${zone}`];
+            }
+
+            // Perform linear interpolation
+            const costRange = upperBracket.kosten - lowerBracket.kosten;
+            const feeRange = upperBracket[`z${zone}`] - lowerBracket[`z${zone}`];
+            const ratio = (cost - lowerBracket.kosten) / costRange;
+            
+            const interpolatedFee = lowerBracket[`z${zone}`] + (feeRange * ratio);
+            
+            // Round to 2 decimal places
+            return Math.round(interpolatedFee * 100) / 100;
+        }
+
+        document.getElementById('hoaiForm').onsubmit = function(e) {
+            e.preventDefault();
+            
+            const constructionCost = parseFloat(document.getElementById('constructionCost').value);
+            const honorarZone = parseInt(document.getElementById('honorarZone').value);
+            
+            try {
+                const fee = calculateHOAIHonorarInterpolated(constructionCost, honorarZone);
+                
+                // Display result
+                document.getElementById('hoaiFee').textContent = formatCurrency(fee);
+                document.getElementById('resultContainer').style.display = 'block';
+            } catch (error) {
+                alert(error.message);
+            }
+        };
+    </script>
+</body>
+</html> 

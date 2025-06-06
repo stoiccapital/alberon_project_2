@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ongoing Projects - Project Management</title>
+    <link rel="stylesheet" href="../styles/style.css">
+    <link rel="icon" type="image/x-icon" href="../public/favicon.ico">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <img src="../public/logo.png" alt="Logo" class="logo">
+            <div class="nav-links">
+                <a href="index.html">Projects</a>
+                <a href="finished.html">Finished</a>
+                <a href="revenue.html">Revenue</a>
+                <a href="employees.html">Employees</a>
+                <a href="receivables.html">Receivables</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Ongoing Projects</h1>
+            <button class="add-button" onclick="openModal()">
+                <span class="plus-icon">+</span>
+                Add New Project
+            </button>
+        </div>
+        <div class="table-container">
+            <table id="projectsTable">
+                <thead>
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Project Number</th>
+                        <th>Project Manager</th>
+                        <th>Phase</th>
+                        <th>Cost</th>
+                        <th>Profit</th>
+                        <th>Margin</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal Form -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Project</h2>
+                <span class="close-button" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="projectForm" class="project-form">
+                <div class="form-group">
+                    <label for="projectName">Project Name</label>
+                    <input type="text" id="projectName" name="projectName" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectNumber">Project Number</label>
+                    <input type="text" id="projectNumber" name="projectNumber" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectManager">Project Manager</label>
+                    <input type="text" id="projectManager" name="projectManager" required>
+                </div>
+                <div class="form-group">
+                    <label for="phase">Phase</label>
+                    <select id="phase" name="phase" required>
+                        <option value="">Select Phase</option>
+                        <option value="Planning">Planning</option>
+                        <option value="Development">Development</option>
+                        <option value="Testing">Testing</option>
+                        <option value="Deployment">Deployment</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cost">Cost</label>
+                    <input type="number" id="cost" name="cost" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="profit">Profit</label>
+                    <input type="number" id="profit" name="profit" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status" required>
+                        <option value="">Select Status</option>
+                        <option value="Active">Active</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Delayed">Delayed</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="cancel-button" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="submit-button">Add Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Store projects in localStorage
+        let projects = JSON.parse(localStorage.getItem('projects')) || [];
+
+        function openModal() {
+            document.getElementById('projectModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('projectModal').style.display = 'none';
+            document.getElementById('projectForm').reset();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('projectModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Calculate margin percentage
+        function calculateMargin(cost, profit) {
+            if (cost === 0) return '0%';
+            const margin = (profit / cost) * 100;
+            return margin.toFixed(2) + '%';
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        // Add new project to table
+        function addProjectToTable(project) {
+            const tbody = document.querySelector('#projectsTable tbody');
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${project.projectName}</td>
+                <td>${project.projectNumber}</td>
+                <td>${project.projectManager}</td>
+                <td>${project.phase}</td>
+                <td>${formatCurrency(project.cost)}</td>
+                <td>${formatCurrency(project.profit)}</td>
+                <td>${calculateMargin(project.cost, project.profit)}</td>
+                <td>${project.status}</td>
+            `;
+            
+            tbody.appendChild(row);
+        }
+
+        // Load projects from localStorage
+        function loadProjects() {
+            const tbody = document.querySelector('#projectsTable tbody');
+            tbody.innerHTML = ''; // Clear existing rows
+            projects.forEach(project => addProjectToTable(project));
+        }
+
+        // Handle form submission
+        document.getElementById('projectForm').onsubmit = function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const project = {
+                projectName: formData.get('projectName'),
+                projectNumber: formData.get('projectNumber'),
+                projectManager: formData.get('projectManager'),
+                phase: formData.get('phase'),
+                cost: parseFloat(formData.get('cost')),
+                profit: parseFloat(formData.get('profit')),
+                status: formData.get('status')
+            };
+
+            // Add to projects array
+            projects.push(project);
+            
+            // Save to localStorage
+            localStorage.setItem('projects', JSON.stringify(projects));
+            
+            // Add to table
+            addProjectToTable(project);
+            
+            // Close modal and reset form
+            closeModal();
+        }
+
+        // Load projects when page loads
+        document.addEventListener('DOMContentLoaded', loadProjects);
+    </script>
+</body>
+</html> 
